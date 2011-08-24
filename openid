@@ -15,6 +15,10 @@ class factory(http.HTTPFactory):
         ctx.client = ctx.channel.transport.getPeer()
         ctx.clientproto = version
 
+        # For log
+        ctx.method = method
+        ctx.uri = resource
+
         if 'GET' == method:
           _, query = resource.split('?', 1)
           params = http.parse_qs(query)
