@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+import sys, time, untwisted
+from twisted.internet import reactor
+from twisted.python import log
+from twisted.web import http
+
+log.startLogging(sys.stdout)
+
+@untwisted.call
+class factory(http.HTTPFactory):
+  class protocol(http.HTTPChannel):
+    class requestFactory(http.Request):
+      def requestReceived(ctx, method, resource, version):
+        ctx.client = ctx.channel.transport.getPeer()
+        ctx.clientproto = version
+
+        if 'GET' == method:
+          _, query = resource.split('?', 1)
+          params = http.parse_qs(query)
+
+        elif 'POST' == method:
+          ctx.content.seek(0)
+          params = http.parse_qs(ctx.content.read())
+
+          mode, = params['openid.mode']
+
+          # All direct requests are HTTP POST
+          if 'check_authentication' == mode:
+            ctx.write(''.join(('is_valid:true\n',
+              'ns:http://specs.openid.net/auth/2.0\n')))
+
+            return ctx.finish()
+
+        mode, = params['openid.mode']
+        if 'checkid_setup' == mode:
+          returnTo, = params['openid.return_to']
+
+          ctx.setHeader('Content-Type', 'text/html')
+
+          ctx.write(''.join(('<html>',
+            '<head>',
+              '<title></title>',
+            '</head><body onload="document.forms[0].submit()">',
+              '<form action="{}" method="post">'.format(returnTo))))
+
+          for key, value in (('assoc_handle', 'TODO'),
+              ('mode', 'id_res'),
+              ('ns', 'http://specs.openid.net/auth/2.0'),
+              ('op_endpoint', resource),
+              ('response_nonce', time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())),
+              ('return_to', returnTo),
+              ('sig', 'TODO'),
+              ('signed', 'assoc_handle,op_endpoint,response_nonce,return_to')):
+            ctx.write('<input name="openid.{}" type="hidden" value="{}"/>'.format(key, value))
+
+          ctx.write(''.join(('<input type="submit" value="Continue"/>',
+                '</form>',
+              '</body>',
+            '</html>')))
+
+        ctx.finish()
+
+reactor.listenTCP(5629, factory, interface='localhost')
+
+reactor.run()
