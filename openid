@@ -124,6 +124,7 @@ class factory(http.HTTPFactory):
 
               ctx.write(''.join(('<input type="submit" value="Continue"/>',
                     '</form>',
+                    '<script>document.forms[0].style.display = "none"</script>',
                   '</body>',
                 '</html>')))
 
@@ -179,6 +180,7 @@ class factory(http.HTTPFactory):
 
           ctx.write(''.join(('<input type="submit" value="Continue"/>',
                 '</form>',
+                '<script>document.forms[0].style.display = "none"</script>',
               '</body>',
             '</html>')))
 
