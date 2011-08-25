@@ -96,18 +96,57 @@ class factory(http.HTTPFactory):
 
         mode, = params['openid.mode']
         if 'checkid_setup' == mode:
+          returnTo, = params['openid.return_to']
+
+          # Default: return_to URL
+          try:
+            realm, = params['openid.realm']
+
+          except KeyError:
+            realm = returnTo
+
+          else:
+
+            # When present, the "openid.return_to" URL MUST match the
+            # "openid.realm", or the OP MUST return an indirect error response
+            if not returnTo.startswith(realm):
+              ctx.setHeader('Content-Type', 'text/html')
+
+              ctx.write(''.join(('<html>',
+                '<head>',
+                  '<title></title>',
+                '</head><body onload="document.forms[0].submit()">',
+                  '<form action="{}" method="post">'.format(returnTo))))
+
+              for key, value in (('mode', 'error'),
+                  ('ns', 'http://specs.openid.net/auth/2.0')):
+                ctx.write('<input name="openid.{}" type="hidden" value="{}"/>'.format(key, value))
+
+              ctx.write(''.join(('<input type="submit" value="Continue"/>',
+                    '</form>',
+                  '</body>',
+                '</html>')))
+
+              return ctx.finish()
+
           for cookieString in ctx.requestHeaders.getRawHeaders('Cookie'):
             for cookiePair in rfc6265.cookieString.match(cookieString, 'cookiePair ( cookieName, cookieValue )'):
               if 'openid' == str(cookiePair.cookieName) and str(cookiePair.cookieValue) in ctx.cookie:
-                returnTo, = params['openid.return_to']
-
                 ctx.setHeader('Content-Type', 'text/html')
 
                 ctx.write(''.join(('<html>',
                   '<head>',
                     '<title></title>',
-                  '</head><body onload="document.forms[0].submit()">',
+                  '</head><body>',
+                    realm,
                     '<form action="{}" method="post">'.format(returnTo))))
+
+                for key, value in (('mode', 'cancel'),
+                    ('ns', 'http://specs.openid.net/auth/2.0')):
+                  ctx.write('<input name="openid.{}" type="hidden" value="{}"/>'.format(key, value))
+
+                ctx.write(''.join(('<input type="submit" value="Reject"/>',
+                  '</form><form action="{}" method="post">'.format(returnTo))))
 
                 for key, value in (('assoc_handle', 'TODO'),
                     ('mode', 'id_res'),
@@ -119,14 +158,12 @@ class factory(http.HTTPFactory):
                     ('signed', 'assoc_handle,op_endpoint,response_nonce,return_to')):
                   ctx.write('<input name="openid.{}" type="hidden" value="{}"/>'.format(key, value))
 
-                ctx.write(''.join(('<input type="submit" value="Continue"/>',
+                ctx.write(''.join(('<input type="submit" value="Approve"/>',
                       '</form>',
                     '</body>',
                   '</html>')))
 
                 return ctx.finish()
-
-          returnTo, = params['openid.return_to']
 
           ctx.setHeader('Content-Type', 'text/html')
 
