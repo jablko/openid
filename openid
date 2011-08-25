@@ -5,8 +5,11 @@ from random import random
 from twisted.internet import reactor
 from twisted.python import log
 from twisted.web import http
+from untwisted import db
 
 log.startLogging(sys.stdout)
+
+conn = db.connect(db='dbmail', user='dbmail')
 
 @untwisted.call
 class factory(http.HTTPFactory):
@@ -34,25 +37,30 @@ class factory(http.HTTPFactory):
 
             password, = params['password']
 
-            # US-ASCII characters excluding CTLs, whitespace DQUOTE, comma,
-            # semicolon, and backslash
-            alphabet = chr(0x21) + ''.join(map(chr, range(0x23, 0x2b + 1))) + ''.join(map(chr, range(0x2d, 0x3a + 1))) + ''.join(map(chr, range(0x3c, 0x5b + 1))) + ''.join(map(chr, range(0x5d, 0x7e + 1)))
+            for cursor in conn:
+              count, = cursor.execute('SELECT COUNT(*) FROM dbmail_users WHERE passwd = %s', password).next()
 
-            # Choose six letters from alphabet, at random
-            letter = random()
-            cookie = ''
-            for _ in range(6):
-              letter *= len(alphabet)
-              cookie += alphabet[int(letter)]
-              letter -= int(letter)
+            if count:
 
-            ctx.cookie.add(cookie)
+              # US-ASCII characters excluding CTLs, whitespace DQUOTE, comma,
+              # semicolon, and backslash
+              alphabet = chr(0x21) + ''.join(map(chr, range(0x23, 0x2b + 1))) + ''.join(map(chr, range(0x2d, 0x3a + 1))) + ''.join(map(chr, range(0x3c, 0x5b + 1))) + ''.join(map(chr, range(0x5d, 0x7e + 1)))
 
-            ctx.setHeader('Set-Cookie', 'openid=' + cookie)
+              # Choose six letters from alphabet, at random
+              letter = random()
+              cookie = ''
+              for _ in range(6):
+                letter *= len(alphabet)
+                cookie += alphabet[int(letter)]
+                letter -= int(letter)
 
-            ctx.redirect('/cookie')
+              ctx.cookie.add(cookie)
 
-            return ctx.finish()
+              ctx.setHeader('Set-Cookie', 'openid=' + cookie)
+
+              ctx.redirect('/cookie')
+
+              return ctx.finish()
 
           ctx.setHeader('Content-Type', 'text/html')
 
