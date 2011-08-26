@@ -135,14 +135,54 @@ class factory(http.HTTPFactory):
           for cookieString in ctx.requestHeaders.getRawHeaders('Cookie', ()):
             for cookiePair in rfc6265.cookieString.match(cookieString, 'cookiePair ( cookieName, cookieValue )'):
               if 'openid' == str(cookiePair.cookieName) and str(cookiePair.cookieValue) in ctx.cookie:
+                alias = {}
+                for key, value in params.iteritems():
+                  if key.startswith('openid.ns.'):
+                    value, = value
+
+                    alias[value] = key[len('openid.ns.'):]
+
+                try:
+                  axAlias = alias['http://openid.net/srv/ax/1.0']
+
+                except KeyError:
+                  pass
+
+                else:
+                  axType = {}
+                  for key, value in params.iteritems():
+                    if key.startswith('openid.{}.type.'.format(axAlias)):
+                      value, = value
+
+                      axType[key[len('openid.{}.type.'.format(axAlias)):]] = value
+
                 ctx.setHeader('Content-Type', 'text/html')
 
                 ctx.write(''.join(('<html>',
                   '<head>',
                     '<title></title>',
                   '</head><body>',
-                    realm,
-                    '<form action="{}" method="post">'.format(returnTo))))
+                    realm)))
+
+                try:
+                  axIfAvailable, = params['openid.{}.if_available'.format(axAlias)]
+
+                except (KeyError, UnboundLocalError):
+                  pass
+
+                else:
+                  ctx.write(''.join(map(axType.get, axIfAvailable.split(','))))
+
+                try:
+                  axRequired, = params['openid.{}.required'.format(axAlias)]
+
+                except (KeyError, UnboundLocalError):
+                  pass
+
+                else:
+                  ctx.write(''.join(map(axType.get, axRequired.split(','))))
+
+                ctx.write('<form action="{}" method="post">'.format(returnTo))
 
                 for key, value in (('mode', 'cancel'),
                     ('ns', 'http://specs.openid.net/auth/2.0')):
