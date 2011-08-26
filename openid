@@ -171,7 +171,9 @@ class factory(http.HTTPFactory):
                   pass
 
                 else:
-                  ctx.write(''.join(map(axType.get, axIfAvailable.split(','))))
+                  ctx.write(''.join(('<ul>',
+                      ''.join(map(untwisted.compose('<li>'.__add__, axType.get), axIfAvailable.split(','))),
+                    '</ul>')))
 
                 try:
                   axRequired, = params['openid.{}.required'.format(axAlias)]
@@ -180,7 +182,9 @@ class factory(http.HTTPFactory):
                   pass
 
                 else:
-                  ctx.write(''.join(map(axType.get, axRequired.split(','))))
+                  ctx.write(''.join(('<ul>',
+                      ''.join(map(untwisted.compose('<li>'.__add__, axType.get), axRequired.split(','))),
+                    '</ul>')))
 
                 ctx.write('<form action="{}" method="post">'.format(returnTo))
 
