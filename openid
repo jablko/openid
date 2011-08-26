@@ -142,41 +142,14 @@ class factory(http.HTTPFactory):
 
                     alias[value] = key[len('openid.ns.'):]
 
-                try:
-                  axAlias = alias['http://openid.net/srv/ax/1.0']
-
-                except KeyError:
-                  pass
-
-                else:
-                  axType = {}
-                  for key, value in params.iteritems():
-                    if key.startswith('openid.{}.type.'.format(axAlias)):
-                      value, = value
-
-                      axType[key[len('openid.{}.type.'.format(axAlias)):]] = value
-
                 ctx.setHeader('Content-Type', 'text/html')
 
                 ctx.write(''.join(('<html>',
                   '<head>',
                     '<title></title>',
                   '</head><body>',
-                    realm)))
-
-                for itm in 'openid.{}.if_available'.format(axAlias), 'openid.{}.required'.format(axAlias):
-                  try:
-                    attribute, = params[itm]
-
-                  except (KeyError, UnboundLocalError):
-                    pass
-
-                  else:
-                    ctx.write(''.join(('<ul>',
-                        ''.join(map(untwisted.compose('<li>'.__add__, axType.get), attribute.split(','))),
-                      '</ul>')))
-
-                ctx.write('<form action="{}" method="post">'.format(returnTo))
+                    realm,
+                    '<form action="{}" method="post">'.format(returnTo))))
 
                 for key, value in (('mode', 'cancel'),
                     ('ns', 'http://specs.openid.net/auth/2.0')):
@@ -194,6 +167,49 @@ class factory(http.HTTPFactory):
                     ('sig', 'TODO'),
                     ('signed', 'assoc_handle,op_endpoint,response_nonce,return_to')):
                   ctx.write('<input name="openid.{}" type="hidden" value="{}"/>'.format(key, value))
+
+                try:
+                  axAlias = alias['http://openid.net/srv/ax/1.0']
+
+                except KeyError:
+                  pass
+
+                else:
+                  ctx.write(''.join(('<input name="openid.ns.{}" type="hidden" value="http://openid.net/srv/ax/1.0"/>'.format(axAlias),
+                    '<input name="openid.{}.mode" type="hidden" value="fetch_response"/>'.format(axAlias))))
+
+                  axType = {}
+                  for key, value in params.iteritems():
+                    if key.startswith('openid.{}.type.'.format(axAlias)):
+                      value, = value
+
+                      axType[key[len('openid.{}.type.'.format(axAlias)):]] = value
+
+                for itm in 'openid.{}.if_available'.format(axAlias), 'openid.{}.required'.format(axAlias):
+                  try:
+                    attribute, = params[itm]
+
+                  except (KeyError, UnboundLocalError):
+                    pass
+
+                  else:
+                    ctx.write('<ul>')
+
+                    for attribute in attribute.split(','):
+                      ctx.write('<li>' + axType[attribute])
+
+                      if axType[attribute] in ('http://schema.openid.net/namePerson', 'http://axschema.org/namePerson'):
+                        ctx.write(''.join(('<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
+                          '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, 'Jack Bates'))))
+
+                      elif axType[attribute] in ('http://schema.openid.net/contact/email', 'http://axschema.org/contact/email'):
+                        ctx.write(''.join(('<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
+                          '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, 'TODO'))))
+
+                      else:
+                        raise Exception
+
+                    ctx.write('</ul>')
 
                 ctx.write(''.join(('<input type="submit" value="Approve"/>',
                       '</form>',
