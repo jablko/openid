@@ -7,6 +7,8 @@ from twisted.python import log
 from twisted.web import http
 from untwisted import db
 
+opEndpoint = 'http://mail.nottheoilrig.com/openid'
+
 log.startLogging(sys.stdout)
 
 conn = db.connect(db='dbmail', user='dbmail')
@@ -152,7 +154,7 @@ class factory(http.HTTPFactory):
                 for key, value in (('assoc_handle', 'TODO'),
                     ('mode', 'id_res'),
                     ('ns', 'http://specs.openid.net/auth/2.0'),
-                    ('op_endpoint', resource),
+                    ('op_endpoint', opEndpoint),
                     ('response_nonce', time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())),
                     ('return_to', returnTo),
                     ('sig', 'TODO'),
