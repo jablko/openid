@@ -27,7 +27,7 @@ class factory(http.HTTPFactory):
 
         if '/cookie' == resource:
           if 'POST' == method:
-            for cookieString in ctx.requestHeaders.getRawHeaders('Cookie'):
+            for cookieString in ctx.requestHeaders.getRawHeaders('Cookie', ()):
               for cookiePair in rfc6265.cookieString.match(cookieString, 'cookiePair ( cookieName, cookieValue )'):
                 if 'openid' == str(cookiePair.cookieName):
                   ctx.cookie.discard(str(cookiePair.cookieValue))
@@ -130,7 +130,7 @@ class factory(http.HTTPFactory):
 
               return ctx.finish()
 
-          for cookieString in ctx.requestHeaders.getRawHeaders('Cookie'):
+          for cookieString in ctx.requestHeaders.getRawHeaders('Cookie', ()):
             for cookiePair in rfc6265.cookieString.match(cookieString, 'cookiePair ( cookieName, cookieValue )'):
               if 'openid' == str(cookiePair.cookieName) and str(cookiePair.cookieValue) in ctx.cookie:
                 ctx.setHeader('Content-Type', 'text/html')
