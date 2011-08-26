@@ -164,27 +164,17 @@ class factory(http.HTTPFactory):
                   '</head><body>',
                     realm)))
 
-                try:
-                  axIfAvailable, = params['openid.{}.if_available'.format(axAlias)]
+                for itm in 'openid.{}.if_available'.format(axAlias), 'openid.{}.required'.format(axAlias):
+                  try:
+                    attribute, = params[itm]
 
-                except (KeyError, UnboundLocalError):
-                  pass
+                  except (KeyError, UnboundLocalError):
+                    pass
 
-                else:
-                  ctx.write(''.join(('<ul>',
-                      ''.join(map(untwisted.compose('<li>'.__add__, axType.get), axIfAvailable.split(','))),
-                    '</ul>')))
-
-                try:
-                  axRequired, = params['openid.{}.required'.format(axAlias)]
-
-                except (KeyError, UnboundLocalError):
-                  pass
-
-                else:
-                  ctx.write(''.join(('<ul>',
-                      ''.join(map(untwisted.compose('<li>'.__add__, axType.get), axRequired.split(','))),
-                    '</ul>')))
+                  else:
+                    ctx.write(''.join(('<ul>',
+                        ''.join(map(untwisted.compose('<li>'.__add__, axType.get), attribute.split(','))),
+                      '</ul>')))
 
                 ctx.write('<form action="{}" method="post">'.format(returnTo))
 
