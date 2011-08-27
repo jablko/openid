@@ -11,7 +11,8 @@ opEndpoint = 'http://mail.nottheoilrig.com/openid'
 
 log.startLogging(sys.stdout)
 
-conn = db.connect(db='dbmail', user='dbmail')
+asdf = db.connect(db='cookie', user='root')
+dbmail = db.connect(db='dbmail', user='dbmail')
 
 @untwisted.call
 class factory(http.HTTPFactory):
@@ -39,7 +40,7 @@ class factory(http.HTTPFactory):
 
             password, = params['password']
 
-            for cursor in conn:
+            for cursor in dbmail:
               count, = cursor.execute('SELECT COUNT(*) FROM dbmail_users WHERE passwd = %s', password).next()
 
             if count:
@@ -203,8 +204,26 @@ class factory(http.HTTPFactory):
                           '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, 'Jack Bates'))))
 
                       elif axType[attribute] in ('http://schema.openid.net/contact/email', 'http://axschema.org/contact/email'):
+                        try:
+                          for cursor in asdf:
+                            sender, = cursor.execute('SELECT sender FROM address WHERE address = %s', realm).next()
+
+                        except StopIteration:
+                          alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
+
+                          # Choose six letters from alphabet, at random
+                          letter = random()
+                          sender = ''
+                          for _ in range(6):
+                            letter *= len(alphabet)
+                            sender += alphabet[int(letter)]
+                            letter -= int(letter)
+
+                          for cursor in asdf:
+                            cursor.execute('INSERT INTO address (address, sender) VALUES (%s, %s)', realm, sender)
+
                         ctx.write(''.join(('<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
-                          '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, 'TODO'))))
+                          '<input name="openid.{}.value.{}" type="hidden" value="{}@nottheoilrig.com"/>'.format(axAlias, attribute, sender))))
 
                       else:
                         raise Exception
