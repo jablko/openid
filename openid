@@ -136,6 +136,24 @@ class factory(http.HTTPFactory):
           for cookieString in ctx.requestHeaders.getRawHeaders('Cookie', ()):
             for cookiePair in rfc6265.cookieString.match(cookieString, 'cookiePair ( cookieName, cookieValue )'):
               if 'openid' == str(cookiePair.cookieName) and str(cookiePair.cookieValue) in ctx.cookie:
+                try:
+                  for cursor in asdf:
+                    sender, = cursor.execute('SELECT sender FROM address WHERE address = %s', realm).next()
+
+                except StopIteration:
+                  alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
+
+                  # Choose six letters from alphabet, at random
+                  letter = random()
+                  sender = ''
+                  for _ in range(6):
+                    letter *= len(alphabet)
+                    sender += alphabet[int(letter)]
+                    letter -= int(letter)
+
+                  for cursor in asdf:
+                    cursor.execute('INSERT INTO address (address, sender) VALUES (%s, %s)', realm, sender)
+
                 alias = {}
                 for key, value in params.iteritems():
                   if key.startswith('openid.ns.'):
@@ -160,13 +178,15 @@ class factory(http.HTTPFactory):
                   '</form><form action="{}" method="post">'.format(returnTo))))
 
                 for key, value in (('assoc_handle', 'TODO'),
+                    ('claimed_id', sender + '@nottheoilrig.com'),
+                    ('identity', sender + '@nottheoilrig.com'),
                     ('mode', 'id_res'),
                     ('ns', 'http://specs.openid.net/auth/2.0'),
                     ('op_endpoint', opEndpoint),
                     ('response_nonce', time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())),
                     ('return_to', returnTo),
                     ('sig', 'TODO'),
-                    ('signed', 'assoc_handle,op_endpoint,response_nonce,return_to')):
+                    ('signed', 'assoc_handle,claimed_id,identity,op_endpoint,response_nonce,return_to')):
                   ctx.write('<input name="openid.{}" type="hidden" value="{}"/>'.format(key, value))
 
                 try:
@@ -204,24 +224,6 @@ class factory(http.HTTPFactory):
                           '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, 'Jack Bates'))))
 
                       elif axType[attribute] in ('http://schema.openid.net/contact/email', 'http://axschema.org/contact/email'):
-                        try:
-                          for cursor in asdf:
-                            sender, = cursor.execute('SELECT sender FROM address WHERE address = %s', realm).next()
-
-                        except StopIteration:
-                          alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
-
-                          # Choose six letters from alphabet, at random
-                          letter = random()
-                          sender = ''
-                          for _ in range(6):
-                            letter *= len(alphabet)
-                            sender += alphabet[int(letter)]
-                            letter -= int(letter)
-
-                          for cursor in asdf:
-                            cursor.execute('INSERT INTO address (address, sender) VALUES (%s, %s)', realm, sender)
-
                         ctx.write(''.join(('<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
                           '<input name="openid.{}.value.{}" type="hidden" value="{}@nottheoilrig.com"/>'.format(axAlias, attribute, sender))))
 
