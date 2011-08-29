@@ -5,9 +5,16 @@ from random import random
 from twisted.internet import reactor
 from twisted.python import log
 from twisted.web import http
-from untwisted import db
+from untwisted import db, promise
 
 opEndpoint = 'http://mail.nottheoilrig.com/openid'
+
+def timeout(secs, *args, **kwds):
+  ctx = promise.promise()
+
+  reactor.callLater(secs, untwisted.partial(ctx, *args or (None,), **kwds))
+
+  return ctx
 
 log.startLogging(sys.stdout)
 
@@ -18,6 +25,7 @@ dbmail = db.connect(db='dbmail', user='dbmail')
 class factory(http.HTTPFactory):
   class protocol(http.HTTPChannel):
     class requestFactory(http.Request):
+      assoc = set()
       cookie = set()
 
       def requestReceived(ctx, method, resource, version):
@@ -154,13 +162,30 @@ class factory(http.HTTPFactory):
                   for cursor in asdf:
                     cursor.execute('INSERT INTO address (address, sender) VALUES (%s, %s)', realm, sender)
 
+                # ASCII characters in the range 33-126 inclusive (printable
+                # non-whitespace characters)
+                alphabet = ''.join(map(chr, range(33, 126 + 1)))
+
+                # Choose six letters from alphabet, at random
+                letter = random()
+                assocHandle = ''
+                for _ in range(6):
+                  letter *= len(alphabet)
+                  assocHandle += alphabet[int(letter)]
+                  letter -= int(letter)
+
+                ctx.assoc.add(assocHandle)
+
+                # 14 days, in seconds
+                timeout(14 * 24 * 60 * 60).then(lambda _: ctx.assoc.remove(assocHandle))
+
+                signed = ['assoc_handle', 'claimed_id', 'identity', 'op_endpoint', 'response_nonce', 'return_to']
+
                 alias = {}
                 for key, value in params.iteritems():
                   if key.startswith('openid.ns.'):
                     value, = value
                     alias[value] = key[len('openid.ns.'):]
-
-                signed = ['assoc_handle', 'claimed_id', 'identity', 'op_endpoint', 'response_nonce', 'return_to']
 
                 ctx.setHeader('Content-Type', 'text/html')
 
@@ -249,7 +274,7 @@ class factory(http.HTTPFactory):
                 except KeyError:
                   pass
 
-                for key, value in (('assoc_handle', 'TODO'),
+                for key, value in (('assoc_handle', assocHandle),
                     ('claimed_id', 'http://nottheoilrig.com/' + sender),
                     ('identity', 'http://nottheoilrig.com/' + sender),
                     ('mode', 'id_res'),
