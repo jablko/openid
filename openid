@@ -206,32 +206,32 @@ class factory(http.HTTPFactory):
 
                       axType[key[len('openid.{}.type.'.format(axAlias)):]] = value
 
-                axValue = {
-                  'http://schema.openid.net/contact/email': sender + '@nottheoilrig.com',
-                  'http://axschema.org/contact/email': sender + '@nottheoilrig.com',
-                  'http://schema.openid.net/namePerson': 'Jack Bates',
-                  'http://axschema.org/namePerson': 'Jack Bates',
-                  'http://schema.openid.net/namePerson/first': 'Jack',
-                  'http://axschema.org/namePerson/first': 'Jack',
-                  'http://schema.openid.net/namePerson/last': 'Bates',
-                  'http://axschema.org/namePerson/last': 'Bates' }
+                  axValue = {
+                    'http://schema.openid.net/contact/email': sender + '@nottheoilrig.com',
+                    'http://axschema.org/contact/email': sender + '@nottheoilrig.com',
+                    'http://schema.openid.net/namePerson': 'Jack Bates',
+                    'http://axschema.org/namePerson': 'Jack Bates',
+                    'http://schema.openid.net/namePerson/first': 'Jack',
+                    'http://axschema.org/namePerson/first': 'Jack',
+                    'http://schema.openid.net/namePerson/last': 'Bates',
+                    'http://axschema.org/namePerson/last': 'Bates' }
 
-                for itm in 'if_available', 'required':
-                  try:
-                    attribute, = params['openid.{}.'.format(axAlias) + itm]
+                  for itm in 'if_available', 'required':
+                    try:
+                      attribute, = params['openid.{}.'.format(axAlias) + itm]
 
-                  except (KeyError, UnboundLocalError):
-                    pass
+                    except KeyError:
+                      pass
 
-                  else:
-                    ctx.write('<ul>')
+                    else:
+                      ctx.write('<ul>')
 
-                    for attribute in attribute.split(','):
-                      ctx.write(''.join(('<li>' + axType[attribute],
-                        '<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
-                        '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axValue[axType[attribute]]))))
+                      for attribute in attribute.split(','):
+                        ctx.write(''.join(('<li>' + axType[attribute],
+                          '<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
+                          '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axValue[axType[attribute]]))))
 
-                    ctx.write('</ul>')
+                      ctx.write('</ul>')
 
                 ctx.write(''.join(('<input type="submit" value="Approve"/>',
                       '</form>',
