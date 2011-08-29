@@ -232,6 +232,34 @@ class factory(http.HTTPFactory):
 
                     ctx.write('</ul>')
 
+                sreg = {
+                  'nickname': 'nottheoilrig',
+                  'email': sender + '@nottheoilrig.com',
+                  'fullname': 'Jack Bates' }
+
+                for itm in 'optional', 'required':
+                  try:
+                    field, = params['openid.sreg.' + itm]
+
+                  except KeyError:
+                    continue
+
+                  ctx.write('<ul>')
+
+                  for field in field.split(','):
+                    ctx.write(''.join(('<li>' + field,
+                      '<input name="openid.sreg.{}" type="hidden" value="{}"/>'.format(field, sreg[field]))))
+
+                  ctx.write('</ul>')
+
+                try:
+                  policyUrl, = params['openid.sreg.policy_url']
+
+                  ctx.write(policyUrl)
+
+                except KeyError:
+                  pass
+
                 ctx.write(''.join(('<input type="submit" value="Approve"/>',
                       '</form>',
                     '</body>',
