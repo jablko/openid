@@ -100,7 +100,14 @@ class factory(http.HTTPFactory):
 
           # All direct requests are HTTP POST
           if 'check_authentication' == mode:
-            ctx.write(''.join(('is_valid:true\n',
+            assocHandle, = params['openid.assoc_handle']
+            if assocHandle in ctx.assoc:
+              ctx.write(''.join(('is_valid:true\n',
+                'ns:http://specs.openid.net/auth/2.0\n')))
+
+              return ctx.finish()
+
+            ctx.write(''.join(('is_valid:false\n',
               'ns:http://specs.openid.net/auth/2.0\n')))
 
             return ctx.finish()
