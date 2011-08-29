@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import rfc6265, sys, time, untwisted
+import base64, hashlib, rfc6265, sys, time, untwisted
 from random import random
 from twisted.internet import reactor
 from twisted.python import log
@@ -96,9 +96,74 @@ class factory(http.HTTPFactory):
           ctx.content.seek(0)
           params = http.parse_qs(ctx.content.read())
 
+          # All direct requests are HTTP POST
           mode, = params['openid.mode']
 
-          # All direct requests are HTTP POST
+          if 'associate' == mode:
+
+            # ASCII characters in the range 33-126 inclusive (printable
+            # non-whitespace characters)
+            alphabet = ''.join(map(chr, range(33, 126 + 1)))
+
+            # Choose six letters from alphabet, at random
+            letter = random()
+            assocHandle = ''
+            for _ in range(6):
+              letter *= len(alphabet)
+              assocHandle += alphabet[int(letter)]
+              letter -= int(letter)
+
+            ctx.assoc.add(assocHandle)
+
+            # 14 days, in seconds
+            timeout(14 * 24 * 60 * 60).then(lambda _: ctx.assoc.remove(assocHandle))
+
+            dhGen, = params['openid.dh_gen']
+            g = base64.b64decode(dhGen)
+
+            dhModulus, = params['openid.dh_modulus']
+            p = base64.b64decode(dhModulus)
+
+            # Random private key xb, in the range [1 .. p-1]
+            xb = random() * p
+
+            dhServerPublic = base64.b64encode(g ** xb % p)
+
+            dhConsumerPublic, = params['openid.dh_consumer_public']
+
+            assocType, = params['openid.assoc_type']
+            sessionType, = params['openid.session_type']
+
+            # The MAC key MUST be the same length as the output of H, the hash
+            # function - 160 bits (20 bytes) for DH-SHA1 or 256 bits (32 bytes)
+            # for DH-SHA256, as well as the output of the signature algorithm
+            # of this association
+
+            if 'DH-SHA1' == sessionType:
+              H = hashlib.sha1()
+
+              if 'HMAC-SHA1' == assocType:
+                key = int(random() * 2 ** 160)
+
+            elif 'DH-SHA256' == sessionType:
+              H = hashlib.sha256()
+
+              if 'HMAC-SHA256' == assocType:
+                key = int(random() * 2 ** 256)
+
+            H.update(base64.b64decode(dhConsumerPublic) ** xb % p)
+            encMacKey = base64.b64encode(H.digest() ^ key)
+
+            ctx.write(''.join(('assoc_handle:{}\n'.format(assocHandle),
+              'assoc_type:{}\n'.format(assocType),
+              'dh_server_public:{}\n'.format(dhServerPublic),
+              'enc_mac_key:{}\n'.format(encMacKey),
+              'expires_in:{}\n'.format(14 * 24 * 60 * 60),
+              'ns:http://specs.openid.net/auth/2.0\n',
+              'session_type:{}\n'.format(sessionType))))
+
+            return ctx.finish()
+
           if 'check_authentication' == mode:
             assocHandle, = params['openid.assoc_handle']
             if assocHandle in ctx.assoc:
@@ -113,6 +178,7 @@ class factory(http.HTTPFactory):
             return ctx.finish()
 
         mode, = params['openid.mode']
+
         if 'checkid_setup' == mode:
           returnTo, = params['openid.return_to']
 
