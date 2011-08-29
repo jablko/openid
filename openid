@@ -219,16 +219,31 @@ class factory(http.HTTPFactory):
                     for attribute in attribute.split(','):
                       ctx.write('<li>' + axType[attribute])
 
+                      if axType[attribute] in ('http://schema.openid.net/contact/email', 'http://axschema.org/contact/email'):
+                        ctx.write(''.join(('<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
+                          '<input name="openid.{}.value.{}" type="hidden" value="{}@nottheoilrig.com"/>'.format(axAlias, attribute, sender))))
+
+                        continue
+
                       if axType[attribute] in ('http://schema.openid.net/namePerson', 'http://axschema.org/namePerson'):
                         ctx.write(''.join(('<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
                           '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, 'Jack Bates'))))
 
-                      elif axType[attribute] in ('http://schema.openid.net/contact/email', 'http://axschema.org/contact/email'):
-                        ctx.write(''.join(('<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
-                          '<input name="openid.{}.value.{}" type="hidden" value="{}@nottheoilrig.com"/>'.format(axAlias, attribute, sender))))
+                        continue
 
-                      else:
-                        raise Exception
+                      if axType[attribute] in ('http://schema.openid.net/namePerson/first', 'http://axschema.org/namePerson/first'):
+                        ctx.write(''.join(('<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
+                          '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, 'Jack'))))
+
+                        continue
+
+                      if axType[attribute] in ('http://schema.openid.net/namePerson/last', 'http://axschema.org/namePerson/last'):
+                        ctx.write(''.join(('<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
+                          '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, 'Bates'))))
+
+                        continue
+
+                      raise Exception
 
                     ctx.write('</ul>')
 
