@@ -221,17 +221,16 @@ class factory(http.HTTPFactory):
                       attribute, = params['openid.{}.'.format(axAlias) + itm]
 
                     except KeyError:
-                      pass
+                      continue
 
-                    else:
-                      ctx.write('<ul>')
+                    ctx.write('<ul>')
 
-                      for attribute in attribute.split(','):
-                        ctx.write(''.join(('<li>' + axType[attribute],
-                          '<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
-                          '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axValue[axType[attribute]]))))
+                    for attribute in attribute.split(','):
+                      ctx.write(''.join(('<li>' + axType[attribute],
+                        '<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
+                        '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axValue[axType[attribute]]))))
 
-                      ctx.write('</ul>')
+                    ctx.write('</ul>')
 
                 ctx.write(''.join(('<input type="submit" value="Approve"/>',
                       '</form>',
