@@ -161,6 +161,8 @@ class factory(http.HTTPFactory):
 
                     alias[value] = key[len('openid.ns.'):]
 
+                signed = ['assoc_handle', 'claimed_id', 'identity', 'op_endpoint', 'response_nonce', 'return_to']
+
                 ctx.setHeader('Content-Type', 'text/html')
 
                 ctx.write(''.join(('<html>',
@@ -176,18 +178,6 @@ class factory(http.HTTPFactory):
 
                 ctx.write(''.join(('<input type="submit" value="Reject"/>',
                   '</form><form action="{}" method="post">'.format(returnTo))))
-
-                for key, value in (('assoc_handle', 'TODO'),
-                    ('claimed_id', 'http://nottheoilrig.com/' + sender),
-                    ('identity', 'http://nottheoilrig.com/' + sender),
-                    ('mode', 'id_res'),
-                    ('ns', 'http://specs.openid.net/auth/2.0'),
-                    ('op_endpoint', opEndpoint),
-                    ('response_nonce', time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())),
-                    ('return_to', returnTo),
-                    ('sig', 'TODO'),
-                    ('signed', 'assoc_handle,claimed_id,identity,op_endpoint,response_nonce,return_to')):
-                  ctx.write('<input name="openid.{}" type="hidden" value="{}"/>'.format(key, value))
 
                 try:
                   axAlias = alias['http://openid.net/srv/ax/1.0']
@@ -244,6 +234,8 @@ class factory(http.HTTPFactory):
                   except KeyError:
                     continue
 
+                  signed += map('sreg.'.__add__, field.split(','))
+
                   ctx.write('<ul>')
 
                   for field in field.split(','):
@@ -259,6 +251,18 @@ class factory(http.HTTPFactory):
 
                 except KeyError:
                   pass
+
+                for key, value in (('assoc_handle', 'TODO'),
+                    ('claimed_id', 'http://nottheoilrig.com/' + sender),
+                    ('identity', 'http://nottheoilrig.com/' + sender),
+                    ('mode', 'id_res'),
+                    ('ns', 'http://specs.openid.net/auth/2.0'),
+                    ('op_endpoint', opEndpoint),
+                    ('response_nonce', time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())),
+                    ('return_to', returnTo),
+                    ('sig', 'TODO'),
+                    ('signed', ','.join(signed))):
+                  ctx.write('<input name="openid.{}" type="hidden" value="{}"/>'.format(key, value))
 
                 ctx.write(''.join(('<input type="submit" value="Approve"/>',
                       '</form>',
