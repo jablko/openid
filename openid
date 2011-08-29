@@ -158,7 +158,6 @@ class factory(http.HTTPFactory):
                 for key, value in params.iteritems():
                   if key.startswith('openid.ns.'):
                     value, = value
-
                     alias[value] = key[len('openid.ns.'):]
 
                 signed = ['assoc_handle', 'claimed_id', 'identity', 'op_endpoint', 'response_nonce', 'return_to']
@@ -193,7 +192,6 @@ class factory(http.HTTPFactory):
                   for key, value in params.iteritems():
                     if key.startswith('openid.{}.type.'.format(axAlias)):
                       value, = value
-
                       axType[key[len('openid.{}.type.'.format(axAlias)):]] = value
 
                   axValue = {
@@ -246,7 +244,6 @@ class factory(http.HTTPFactory):
 
                 try:
                   policyUrl, = params['openid.sreg.policy_url']
-
                   ctx.write(policyUrl)
 
                 except KeyError:
