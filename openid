@@ -206,9 +206,9 @@ class factory(http.HTTPFactory):
 
                       axType[key[len('openid.{}.type.'.format(axAlias)):]] = value
 
-                for itm in 'openid.{}.if_available', 'openid.{}.required':
+                for itm in 'if_available', 'required':
                   try:
-                    attribute, = params[itm.format(axAlias)]
+                    attribute, = params['openid.{}.'.format(axAlias) + itm]
 
                   except (KeyError, UnboundLocalError):
                     pass
