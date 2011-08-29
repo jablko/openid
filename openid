@@ -138,7 +138,7 @@ class factory(http.HTTPFactory):
             # Random private key xb, in the range [1 .. p-1]
             xb = random() * p
 
-            dhServerPublic = base64.b64encode(g ** xb % p)
+            dhServerPublic = base64.b64encode(pow(g, xb, p))
 
             dhConsumerPublic, = params['openid.dh_consumer_public']
 
@@ -162,7 +162,7 @@ class factory(http.HTTPFactory):
               if 'HMAC-SHA256' == assocType:
                 key = int(random() * 2 ** 256)
 
-            H.update(base64.b64decode(dhConsumerPublic) ** xb % p)
+            H.update(pow(base64.b64decode(dhConsumerPublic), xb, p))
             encMacKey = base64.b64encode(H.digest() ^ key)
 
             ctx.write(''.join(('assoc_handle:{}\n'.format(assocHandle),
