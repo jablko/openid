@@ -178,8 +178,8 @@ class factory(http.HTTPFactory):
                   '</form><form action="{}" method="post">'.format(returnTo))))
 
                 for key, value in (('assoc_handle', 'TODO'),
-                    ('claimed_id', sender + '@nottheoilrig.com'),
-                    ('identity', sender + '@nottheoilrig.com'),
+                    ('claimed_id', 'http://nottheoilrig.com/' + sender),
+                    ('identity', 'http://nottheoilrig.com/' + sender),
                     ('mode', 'id_res'),
                     ('ns', 'http://specs.openid.net/auth/2.0'),
                     ('op_endpoint', opEndpoint),
