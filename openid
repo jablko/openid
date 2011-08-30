@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import base64, hashlib, hmac, pickle, rfc6265, sys, time, untwisted
+import base64, hashlib, hmac, os, pickle, rfc6265, sys, time, untwisted
 from random import random
 from twisted.internet import reactor
 from twisted.python import log
@@ -159,13 +159,13 @@ class factory(http.HTTPFactory):
               H = hashlib.sha1()
 
               if 'HMAC-SHA1' == assocType:
-                key = int(random() * 2 ** 160)
+                key = os.urandom(20)
 
             elif 'DH-SHA256' == sessionType:
               H = hashlib.sha256()
 
               if 'HMAC-SHA256' == assocType:
-                key = int(random() * 2 ** 256)
+                key = os.urandom(32)
 
             H.update(btwocEnc(pow(btwocDec(base64.b64decode(dhConsumerPublic)), xb, p)))
             encMacKey = base64.b64encode(H.digest() ^ key)
@@ -364,7 +364,7 @@ class factory(http.HTTPFactory):
                 except KeyError:
                   pass
 
-                key = int(random() * 2 ** 256)
+                key = os.urandom(32)
 
                 for key, value in (('mode', 'id_res'),
                     ('ns', 'http://specs.openid.net/auth/2.0'),
