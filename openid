@@ -17,7 +17,7 @@ def btwocEnc(asdf):
 
   result = ''
   while asdf:
-    result = chr(asdf % 0x100) + result
+    result = chr(asdf & 0xff) + result
     asdf >>= 8
 
   # All integers that are used with Diffie-Hellman Key Exchange are positive.
@@ -29,7 +29,7 @@ def btwocEnc(asdf):
 
   return result
 
-btwocDec = untwisted.compose(untwisted.partial(reduce, lambda result, itm: 0x100 * result + itm), untwisted.partial(map, ord))
+btwocDec = untwisted.compose(untwisted.partial(reduce, lambda result, itm: (result << 8) + itm), untwisted.partial(map, ord))
 
 def timeout(secs, *args, **kwds):
   ctx = promise.promise()
