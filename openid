@@ -184,7 +184,7 @@ class factory(http.HTTPFactory):
               if 'HMAC-SHA256' == assocType:
                 key = int(random() * 2 ** 256)
 
-            H.update(pow(btwocDec(base64.b64decode(dhConsumerPublic)), xb, p))
+            H.update(btwocEnc(pow(btwocDec(base64.b64decode(dhConsumerPublic)), xb, p)))
             encMacKey = base64.b64encode(H.digest() ^ key)
 
             ctx.write(''.join(('assoc_handle:{}\n'.format(assocHandle),
