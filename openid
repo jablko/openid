@@ -170,26 +170,26 @@ class factory(http.HTTPFactory):
             H.update(btwocEnc(pow(btwocDec(base64.b64decode(dhConsumerPublic)), xb, p)))
             encMacKey = base64.b64encode(H.digest() ^ key)
 
-            ctx.write(''.join(('assoc_handle:{}\n'.format(assocHandle),
-              'assoc_type:{}\n'.format(assocType),
-              'dh_server_public:{}\n'.format(dhServerPublic),
-              'enc_mac_key:{}\n'.format(encMacKey),
-              'expires_in:{}\n'.format(14 * 24 * 60 * 60),
-              'ns:http://specs.openid.net/auth/2.0\n',
-              'session_type:{}\n'.format(sessionType))))
+            ctx.write('\n'.join(map(':'.join, (('assoc_handle', assocHandle),
+              ('assoc_type', assocType),
+              ('dh_server_public', dhServerPublic),
+              ('enc_mac_key', encMacKey),
+              ('expires_in', 14 * 24 * 60 * 60),
+              ('ns', 'http://specs.openid.net/auth/2.0'),
+              ('session_type', sessionType)))) + '\n')
 
             return ctx.finish()
 
           if 'check_authentication' == mode:
             assocHandle, = params['openid.assoc_handle']
             if assocHandle in ctx.assoc:
-              ctx.write(''.join(('is_valid:true\n',
-                'ns:http://specs.openid.net/auth/2.0\n')))
+              ctx.write('\n'.join(map(':'.join, (('is_valid', 'true'),
+                ('ns', 'http://specs.openid.net/auth/2.0')))) + '\n')
 
               return ctx.finish()
 
-            ctx.write(''.join(('is_valid:false\n',
-              'ns:http://specs.openid.net/auth/2.0\n')))
+            ctx.write('\n'.join(map(':'.join, (('is_valid', 'false'),
+              ('ns', 'http://specs.openid.net/auth/2.0')))) + '\n')
 
             return ctx.finish()
 
