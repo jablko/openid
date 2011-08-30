@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import base64, hashlib, rfc6265, sys, time, untwisted
+import base64, hashlib, pickle, rfc6265, sys, time, untwisted
 from random import random
 from twisted.internet import reactor
 from twisted.python import log
@@ -11,25 +11,8 @@ opEndpoint = 'http://mail.nottheoilrig.com/openid'
 
 # Arbitrary precision integers MUST be encoded as big-endian signed two's
 # complement binary strings
-def btwocEnc(asdf):
-  if not asdf:
-    return '\x00'
-
-  result = ''
-  while asdf:
-    result = chr(asdf & 0xff) + result
-    asdf >>= 8
-
-  # All integers that are used with Diffie-Hellman Key Exchange are positive.
-  # This means that the left-most bit of the two's complement representation
-  # MUST be zero. If it is not, implementations MUST add a zero byte at the
-  # front of the string
-  if 0x7f < ord(result[0]):
-    return '\x00' + result
-
-  return result
-
-btwocDec = untwisted.compose(untwisted.partial(reduce, lambda result, itm: (result << 8) + itm), untwisted.partial(map, ord))
+btwocEnc = lambda asdf: pickle.encode_long(asdf)[::-1] if asdf else '\x00'
+btwocDec = lambda asdf: pickle.decode_long(asdf[::-1])
 
 def timeout(secs, *args, **kwds):
   ctx = promise.promise()
