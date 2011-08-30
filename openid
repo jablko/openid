@@ -290,8 +290,12 @@ class factory(http.HTTPFactory):
                 ctx.write(''.join(('<html>',
                   '<head>',
                     '<title></title>',
-                  '</head><body>',
-                    realm)))
+                  '</head><body>')))
+
+                div = etree.Element('div')
+                div.text = realm
+
+                ctx.write(etree.tostring(div))
 
                 form = etree.Element('form', action=returnTo, method='post')
 
@@ -375,9 +379,11 @@ class factory(http.HTTPFactory):
 
                   ctx.write('</ul>')
 
+                div = etree.Element('div')
                 try:
-                  policyUrl, = params['openid.sreg.policy_url']
-                  ctx.write(policyUrl)
+                  div.text, = params['openid.sreg.policy_url']
+
+                  ctx.write(etree.tostring(div))
 
                 except KeyError:
                   pass
