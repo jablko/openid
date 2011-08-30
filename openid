@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import base64, hashlib, hmac, os, pickle, rfc6265, sys, time, untwisted
+from lxml import etree
 from random import random
 from twisted.internet import reactor
 from twisted.python import log
@@ -215,16 +216,19 @@ class factory(http.HTTPFactory):
               ctx.write(''.join(('<html>',
                 '<head>',
                   '<title></title>',
-                '</head><body onload="document.forms[0].submit()">',
-                  '<form action="{}" method="post">'.format(returnTo))))
+                '</head><body onload="document.forms[0].submit()">')))
+
+              form = etree.Element('form', action=returnTo, method='post')
 
               for key, value in (('mode', 'error'),
                   ('ns', 'http://specs.openid.net/auth/2.0')):
-                ctx.write('<input name="openid.{}" type="hidden" value="{}"/>'.format(key, value))
+                form.append(etree.Element('input', name='openid.' + key, type='hidden', value=value))
 
-              ctx.write(''.join(('<input type="submit" value="Continue"/>',
-                    '</form>',
-                    '<script>document.forms[0].style.display = "none"</script>',
+              form.append(etree.Element('input', type='submit', value='Continue'))
+
+              ctx.write(etree.tostring(form))
+
+              ctx.write(''.join(('<script>document.forms[0].style.display = "none"</script>',
                   '</body>',
                 '</html>')))
 
@@ -287,15 +291,19 @@ class factory(http.HTTPFactory):
                   '<head>',
                     '<title></title>',
                   '</head><body>',
-                    realm,
-                    '<form action="{}" method="post">'.format(returnTo))))
+                    realm)))
+
+                form = etree.Element('form', action=returnTo, method='post')
 
                 for key, value in (('mode', 'cancel'),
                     ('ns', 'http://specs.openid.net/auth/2.0')):
-                  ctx.write('<input name="openid.{}" type="hidden" value="{}"/>'.format(key, value))
+                  form.append(etree.Element('input', name='openid.' + key, type='hidden', value=value))
 
-                ctx.write(''.join(('<input type="submit" value="Reject"/>',
-                  '</form><form action="{}" method="post">'.format(returnTo))))
+                form.append(etree.Element('input', type='submit', value='Reject'))
+
+                ctx.write(etree.tostring(form))
+
+                form = etree.Element('form', action=returnTo, method='post')
 
                 try:
                   axAlias = alias['http://openid.net/srv/ax/1.0']
@@ -304,8 +312,8 @@ class factory(http.HTTPFactory):
                   pass
 
                 else:
-                  ctx.write(''.join(('<input name="openid.ns.{}" type="hidden" value="http://openid.net/srv/ax/1.0"/>'.format(axAlias),
-                    '<input name="openid.{}.mode" type="hidden" value="fetch_response"/>'.format(axAlias))))
+                  form.append(etree.Element('input', name='openid.ns.' + axAlias, type='hidden', value='http://openid.net/srv/ax/1.0'))
+                  form.append(etree.Element('input', name='openid.{}.mode'.format(axAlias), type='hidden', value='fetch_response'))
 
                   axType = {}
                   for key, value in params.iteritems():
@@ -333,9 +341,13 @@ class factory(http.HTTPFactory):
                     ctx.write('<ul>')
 
                     for attribute in attribute.split(','):
-                      ctx.write(''.join(('<li>' + axType[attribute],
-                        '<input name="openid.{}.type.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axType[attribute]),
-                        '<input name="openid.{}.value.{}" type="hidden" value="{}"/>'.format(axAlias, attribute, axValue[axType[attribute]]))))
+                      li = etree.Element('li')
+                      li.text = axType[attribute]
+
+                      ctx.write(etree.tostring(li))
+
+                      form.append(etree.Element('input', name='openid.{}.type.'.format(axAlias) + attribute, type='hidden', value=axType[attribute]))
+                      form.append(etree.Element('input', name='openid.{}.value.'.format(axAlias) + attribute, type='hidden', value=axValue[axType[attribute]]))
 
                     ctx.write('</ul>')
 
@@ -353,9 +365,15 @@ class factory(http.HTTPFactory):
 
                   signed += zip(map('sreg.'.__add__, field.split(',')), map(sreg.get, field.split(',')))
 
-                  ctx.write(''.join(('<ul>',
-                      map('<li>'.__add__, field.split(',')),
-                    '</ul>')))
+                  ctx.write('<ul>')
+
+                  for field in field.split(','):
+                    li = etree.Element('li')
+                    li.text = field
+
+                    ctx.write(etree.tostring(li))
+
+                  ctx.write('</ul>')
 
                 try:
                   policyUrl, = params['openid.sreg.policy_url']
@@ -370,11 +388,13 @@ class factory(http.HTTPFactory):
                     ('ns', 'http://specs.openid.net/auth/2.0'),
                     ('sig', base64.b64encode(hmac.new(key, '\n'.join(map(':'.join, signed)) + '\n', hashlib.sha256).digest())),
                     ('signed', ','.join(signed for signed, _ in signed))) + signed:
-                  ctx.write('<input name="openid.{}" type="hidden" value="{}"/>'.format(key, value))
+                  form.append(etree.Element('input', name='openid.' + key, type='hidden', value=value))
 
-                ctx.write(''.join(('<input type="submit" value="Approve"/>',
-                      '</form>',
-                    '</body>',
+                form.append(etree.Element('input', type='submit', value='Approve'))
+
+                ctx.write(etree.tostring(form))
+
+                ctx.write(''.join(('</body>',
                   '</html>')))
 
                 return ctx.finish()
@@ -384,16 +404,19 @@ class factory(http.HTTPFactory):
           ctx.write(''.join(('<html>',
             '<head>',
               '<title></title>',
-            '</head><body onload="document.forms[0].submit()">',
-              '<form action="{}" method="post">'.format(returnTo))))
+            '</head><body onload="document.forms[0].submit()">')))
+
+          form = etree.Element('form', action=returnTo, method='post')
 
           for key, value in (('mode', 'cancel'),
               ('ns', 'http://specs.openid.net/auth/2.0')):
-            ctx.write('<input name="openid.{}" type="hidden" value="{}"/>'.format(key, value))
+            form.append(etree.Element('input', name='openid.' + key, type='hidden', value=value))
 
-          ctx.write(''.join(('<input type="submit" value="Continue"/>',
-                '</form>',
-                '<script>document.forms[0].style.display = "none"</script>',
+          form.append(etree.Element('input', type='submit', value='Continue'))
+
+          ctx.write(etree.tostring(form))
+
+          ctx.write(''.join(('<script>document.forms[0].style.display = "none"</script>',
               '</body>',
             '</html>')))
 
