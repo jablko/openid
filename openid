@@ -279,13 +279,13 @@ class factory(http.HTTPFactory):
                 # 14 days, in seconds
                 timeout(14 * 24 * 60 * 60).then(lambda _: ctx.assoc.remove(assocHandle))
 
-                signed = (
+                signed = [
                   ('assoc_handle', assocHandle),
                   ('claimed_id', 'http://nottheoilrig.com/' + sender),
                   ('identity', 'http://nottheoilrig.com/' + sender),
                   ('op_endpoint', opEndpoint),
                   ('response_nonce', time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())),
-                  ('return_to', returnTo))
+                  ('return_to', returnTo)]
 
                 alias = {}
                 for key, value in params.iteritems():
@@ -377,7 +377,7 @@ class factory(http.HTTPFactory):
                   except KeyError:
                     continue
 
-                  signed += zip(map('sreg.'.__add__, field.split(',')), map(sreg.get, field.split(',')))
+                  signed.extend(zip(map('sreg.'.__add__, field.split(',')), map(sreg.get, field.split(','))))
 
                   ctx.write('<ul>')
 
@@ -400,11 +400,13 @@ class factory(http.HTTPFactory):
 
                 key = os.urandom(32)
 
-                for key, value in (
-                    ('mode', 'id_res'),
-                    ('ns', 'http://specs.openid.net/auth/2.0'),
-                    ('sig', base64.b64encode(hmac.new(key, '\n'.join(map(':'.join, signed)) + '\n', hashlib.sha256).digest())),
-                    ('signed', ','.join(signed for signed, _ in signed))) + signed:
+                signed.extend((
+                  ('mode', 'id_res'),
+                  ('ns', 'http://specs.openid.net/auth/2.0'),
+                  ('sig', base64.b64encode(hmac.new(key, '\n'.join(map(':'.join, signed)) + '\n', hashlib.sha256).digest())),
+                  ('signed', ','.join(signed for signed, _ in signed))))
+
+                for key, value in signed:
                   form.append(etree.Element('input', name='openid.' + key, type='hidden', value=value))
 
                 form.append(etree.Element('input', type='submit', value='Approve'))
