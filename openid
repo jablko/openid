@@ -81,7 +81,8 @@ class factory(http.HTTPFactory):
 
           ctx.setHeader('Content-Type', 'text/html')
 
-          ctx.write(''.join(('<html>',
+          ctx.write(''.join((
+            '<html>',
               '<head>',
                 '<title></title>',
               '</head><body>',
@@ -171,7 +172,8 @@ class factory(http.HTTPFactory):
             H.update(btwocEnc(pow(btwocDec(base64.b64decode(dhConsumerPublic)), xb, p)))
             encMacKey = base64.b64encode(H.digest() ^ key)
 
-            ctx.write('\n'.join(map(':'.join, (('assoc_handle', assocHandle),
+            ctx.write('\n'.join(map(':'.join, (
+              ('assoc_handle', assocHandle),
               ('assoc_type', assocType),
               ('dh_server_public', dhServerPublic),
               ('enc_mac_key', encMacKey),
@@ -184,12 +186,14 @@ class factory(http.HTTPFactory):
           if 'check_authentication' == mode:
             assocHandle, = params['openid.assoc_handle']
             if assocHandle in ctx.assoc:
-              ctx.write('\n'.join(map(':'.join, (('is_valid', 'true'),
+              ctx.write('\n'.join(map(':'.join, (
+                ('is_valid', 'true'),
                 ('ns', 'http://specs.openid.net/auth/2.0')))) + '\n')
 
               return ctx.finish()
 
-            ctx.write('\n'.join(map(':'.join, (('is_valid', 'false'),
+            ctx.write('\n'.join(map(':'.join, (
+              ('is_valid', 'false'),
               ('ns', 'http://specs.openid.net/auth/2.0')))) + '\n')
 
             return ctx.finish()
@@ -213,14 +217,16 @@ class factory(http.HTTPFactory):
             if not returnTo.startswith(realm):
               ctx.setHeader('Content-Type', 'text/html')
 
-              ctx.write(''.join(('<html>',
-                '<head>',
-                  '<title></title>',
-                '</head><body onload="document.forms[0].submit()">')))
+              ctx.write(''.join((
+                '<html>',
+                  '<head>',
+                    '<title></title>',
+                  '</head><body onload="document.forms[0].submit()">')))
 
               form = etree.Element('form', action=returnTo, method='post')
 
-              for key, value in (('mode', 'error'),
+              for key, value in (
+                  ('mode', 'error'),
                   ('ns', 'http://specs.openid.net/auth/2.0')):
                 form.append(etree.Element('input', name='openid.' + key, type='hidden', value=value))
 
@@ -228,7 +234,8 @@ class factory(http.HTTPFactory):
 
               ctx.write(etree.tostring(form))
 
-              ctx.write(''.join(('<script>document.forms[0].style.display = "none"</script>',
+              ctx.write(''.join((
+                    '<script>document.forms[0].style.display = "none"</script>',
                   '</body>',
                 '</html>')))
 
@@ -272,7 +279,8 @@ class factory(http.HTTPFactory):
                 # 14 days, in seconds
                 timeout(14 * 24 * 60 * 60).then(lambda _: ctx.assoc.remove(assocHandle))
 
-                signed = (('assoc_handle', assocHandle),
+                signed = (
+                  ('assoc_handle', assocHandle),
                   ('claimed_id', 'http://nottheoilrig.com/' + sender),
                   ('identity', 'http://nottheoilrig.com/' + sender),
                   ('op_endpoint', opEndpoint),
@@ -287,10 +295,11 @@ class factory(http.HTTPFactory):
 
                 ctx.setHeader('Content-Type', 'text/html')
 
-                ctx.write(''.join(('<html>',
-                  '<head>',
-                    '<title></title>',
-                  '</head><body>')))
+                ctx.write(''.join((
+                  '<html>',
+                    '<head>',
+                      '<title></title>',
+                    '</head><body>')))
 
                 div = etree.Element('div')
                 div.text = realm
@@ -299,7 +308,8 @@ class factory(http.HTTPFactory):
 
                 form = etree.Element('form', action=returnTo, method='post')
 
-                for key, value in (('mode', 'cancel'),
+                for key, value in (
+                    ('mode', 'cancel'),
                     ('ns', 'http://specs.openid.net/auth/2.0')):
                   form.append(etree.Element('input', name='openid.' + key, type='hidden', value=value))
 
@@ -390,7 +400,8 @@ class factory(http.HTTPFactory):
 
                 key = os.urandom(32)
 
-                for key, value in (('mode', 'id_res'),
+                for key, value in (
+                    ('mode', 'id_res'),
                     ('ns', 'http://specs.openid.net/auth/2.0'),
                     ('sig', base64.b64encode(hmac.new(key, '\n'.join(map(':'.join, signed)) + '\n', hashlib.sha256).digest())),
                     ('signed', ','.join(signed for signed, _ in signed))) + signed:
@@ -400,21 +411,24 @@ class factory(http.HTTPFactory):
 
                 ctx.write(etree.tostring(form))
 
-                ctx.write(''.join(('</body>',
+                ctx.write(''.join((
+                    '</body>',
                   '</html>')))
 
                 return ctx.finish()
 
           ctx.setHeader('Content-Type', 'text/html')
 
-          ctx.write(''.join(('<html>',
-            '<head>',
-              '<title></title>',
-            '</head><body onload="document.forms[0].submit()">')))
+          ctx.write(''.join((
+            '<html>',
+              '<head>',
+                '<title></title>',
+              '</head><body onload="document.forms[0].submit()">')))
 
           form = etree.Element('form', action=returnTo, method='post')
 
-          for key, value in (('mode', 'cancel'),
+          for key, value in (
+              ('mode', 'cancel'),
               ('ns', 'http://specs.openid.net/auth/2.0')):
             form.append(etree.Element('input', name='openid.' + key, type='hidden', value=value))
 
@@ -422,7 +436,8 @@ class factory(http.HTTPFactory):
 
           ctx.write(etree.tostring(form))
 
-          ctx.write(''.join(('<script>document.forms[0].style.display = "none"</script>',
+          ctx.write(''.join((
+                '<script>document.forms[0].style.display = "none"</script>',
               '</body>',
             '</html>')))
 
