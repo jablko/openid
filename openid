@@ -111,14 +111,14 @@ class factory(http.HTTPFactory):
 
             try:
               dhGen, = params['openid.dh_gen']
-              g = base64.b64decode(dhGen.replace('-', '+').replace('_', '/'))
+              g = btwocDec(base64.b64decode(dhGen.replace('-', '+').replace('_', '/')))
 
             except KeyError:
               g = 2
 
             try:
               dhModulus, = params['openid.dh_modulus']
-              p = base64.b64decode(dhModulus.replace('-', '+').replace('_', '/'))
+              p = btwocDec(base64.b64decode(dhModulus.replace('-', '+').replace('_', '/')))
 
             except KeyError:
 

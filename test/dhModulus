@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+
+from openid.test import *
+from twisted.internet import protocol
+from twisted.web import http
+
+expect(1)
+
+@sdfg
+def _():
+
+  @untwisted.call
+  class factory(protocol.ClientFactory):
+    class protocol(http.HTTPClient):
+      def connectionMade(ctx):
+        content = '&'.join(map(untwisted.compose('openid.'.__add__, '='.join), (
+          ('assoc_type', 'HMAC-SHA256'),
+          ('dh_consumer_public', 'YGSQs61PYQOemvn083jyxpErqM7YlGEGEcPLlbxJ7lZtlLkmjdWdMj7JJr1U8efpOMfwvnlPrFo_rk0kx2so6tBcBJQghBtMSvPSxnEwM4mrRkhyDtSqSulSYLCx3-mcCtTvaPB6d2_6KSy48igPf9n2rSqz3g_AJzKsMA3EK6I='),
+          ('dh_modulus', 'ANz5OguIOXLsDhmYmsWizjEOHTdxfo2Vcbt2I3MYZuYe91ouJ4mLBX-YkcLiemOcPym2CBRYHNOyyjmG0mg3BVd9RcLn5S3IHHoXGHblzqdLFEi_368Ygo79JRnxTkXjgmY0rxlJ5bU1zIKaSDuKdiI-XUkKJX8Fvf8W8vsixYOr'),
+          ('mode', 'associate'),
+          ('session_type', 'DH-SHA256'))))
+
+        ctx.sendCommand('POST', '/')
+
+        ctx.sendHeader('Content-Length', len(content))
+
+        ctx.endHeaders()
+
+        ctx.transport.write(content)
+
+        untwisted.randstr = lambda length, alphabet: 'abc123'
+        random.__call__ = lambda: 0.70890023519256384
+        os.urandom = lambda _: 'H\x94\x8bS\xe1\xc5I\xbb\xe27\xf9\xfdX\xbe\x17\x1a\xf9\xa1\xbdDc{P]\xb9u9\xb8\x97R\x19\xd0'
+
+      handleResponse = staticmethod(untwisted.partial(equal, '\n'.join(map(':'.join, (
+        ('assoc_handle', 'abc123'),
+        ('assoc_type', 'HMAC-SHA256'),
+        ('dh_server_public', 'QvR3WH6SaeBtFT2CXc2Yyh8IoQYoWwR9A6K3oDTCvtwVT3fNxCa/oUS+TLTe5FSIA0N9XfpF7QuZpreUJKrlPdBMLgEn45a7UlAURAATVBpJwKYYSlB82fAEIWnkZwVJmDIErCL8776BDAgV6ykYBvkKCdJ92agkH98iV9FxBP4='),
+        ('enc_mac_key', '2AT/UGQZOIlOktgn/bYGHPmoVaFak0CWBK7VVIcZyog='),
+        ('expires_in', str(14 * 24 * 60 * 60)),
+        ('ns', 'http://specs.openid.net/auth/2.0'),
+        ('session_type', 'DH-SHA256')))) + '\n'))
+
+  reactor.connectTCP('localhost', 5629, factory)
