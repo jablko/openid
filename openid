@@ -170,7 +170,7 @@ class factory(http.HTTPFactory):
                 key = os.urandom(32)
 
             H.update(btwocEnc(pow(btwocDec(base64.b64decode(dhConsumerPublic)), xb, p)))
-            encMacKey = base64.b64encode(H.digest() ^ key)
+            encMacKey = base64.b64encode(''.join(chr(ord(digest) ^ ord(key)) for digest, key in zip(H.digest(), key)))
 
             ctx.write('\n'.join(map(':'.join, (
               ('assoc_handle', assocHandle),
