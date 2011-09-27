@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+
+import time
+from openid.test import *
+from twisted.internet import protocol
+from twisted.web import http
+
+expect(1)
+
+@sdfg
+def _():
+
+  @untwisted.call
+  class factory(protocol.ClientFactory):
+    class protocol(http.HTTPClient):
+      def connectionMade(ctx):
+        content = '&'.join(map(untwisted.compose('openid.'.__add__, '='.join), (
+          ('mode', 'checkid_setup'),
+          ('return_to', 'http://example.com/return'),
+          ('sreg.policy_url', 'http://example.com/policy'))))
+
+        ctx.sendCommand('POST', '/')
+
+        ctx.sendHeader('Cookie', 'openid=abc123')
+        ctx.sendHeader('Content-Length', len(content))
+
+        ctx.endHeaders()
+
+        ctx.transport.write(content)
+
+        globals['factory'].protocol.requestFactory.cookie.add('abc123')
+
+        class cursor:
+          execute = lambda ctx, operation, *args: ctx
+          next = lambda _: ('abc123',)
+
+        connect.__iter__ = lambda _: (yield cursor())
+
+        untwisted.randstr = lambda length, alphabet: 'abc123'
+
+        def gmtime():
+          try:
+            return gmtime(1234567890)
+
+          finally:
+            time.gmtime = gmtime
+
+        gmtime, time.gmtime = time.gmtime, gmtime
+
+        os.urandom = lambda _: 'H\x94\x8bS\xe1\xc5I\xbb\xe27\xf9\xfdX\xbe\x17\x1a\xf9\xa1\xbdDc{P]\xb9u9\xb8\x97R\x19\xd0'
+
+      handleResponse = staticmethod(untwisted.partial(equal, ''.join((
+        '<html>',
+          '<head>',
+            '<title></title>',
+          '</head><body>',
+            '<div>',
+              'http://example.com/return',
+            '</div><form action="http://example.com/return" method="post">',
+              '<input type="hidden" name="openid.mode" value="cancel"/>',
+              '<input type="hidden" name="openid.ns" value="http://specs.openid.net/auth/2.0"/>',
+              '<input type="submit" value="Reject"/>',
+            '</form><div>',
+              'http://example.com/policy',
+            '</div><form action="http://example.com/return" method="post">',
+              '<input type="hidden" name="openid.assoc_handle" value="abc123"/>',
+              '<input type="hidden" name="openid.claimed_id" value="http://nottheoilrig.com/abc123"/>',
+              '<input type="hidden" name="openid.identity" value="http://nottheoilrig.com/abc123"/>',
+              '<input type="hidden" name="openid.op_endpoint" value="http://mail.nottheoilrig.com/openid"/>',
+              '<input type="hidden" name="openid.response_nonce" value="2009-02-13T23:31:30Z"/>',
+              '<input type="hidden" name="openid.return_to" value="http://example.com/return"/>',
+              '<input type="hidden" name="openid.mode" value="id_res"/>',
+              '<input type="hidden" name="openid.ns" value="http://specs.openid.net/auth/2.0"/>',
+              '<input type="hidden" name="openid.sig" value="VPspC2yIaMlcausGh3FNBiGfQl8zS5wSyRnk+ksljPs="/>',
+              '<input type="hidden" name="openid.signed" value="assoc_handle,claimed_id,identity,op_endpoint,response_nonce,return_to"/>',
+              '<input type="submit" value="Approve"/>',
+            '</form>',
+          '</body>',
+        '</html>'))))
+
+  reactor.connectTCP('localhost', 5629, factory)
