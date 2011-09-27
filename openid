@@ -111,14 +111,14 @@ class factory(http.HTTPFactory):
 
             try:
               dhGen, = params['openid.dh_gen']
-              g = base64.b64decode(dhGen)
+              g = base64.b64decode(dhGen.replace('-', '+').replace('_', '/'))
 
             except KeyError:
               g = 2
 
             try:
               dhModulus, = params['openid.dh_modulus']
-              p = base64.b64decode(dhModulus)
+              p = base64.b64decode(dhModulus.replace('-', '+').replace('_', '/'))
 
             except KeyError:
 
@@ -153,7 +153,7 @@ class factory(http.HTTPFactory):
               if 'HMAC-SHA256' == assocType:
                 key = os.urandom(32)
 
-            H.update(btwocEnc(pow(btwocDec(base64.b64decode(dhConsumerPublic)), xb, p)))
+            H.update(btwocEnc(pow(btwocDec(base64.b64decode(dhConsumerPublic.replace('-', '+').replace('_', '/'))), xb, p)))
             encMacKey = base64.b64encode(''.join(chr(ord(digest) ^ ord(key)) for digest, key in zip(H.digest(), key)))
 
             ctx.write('\n'.join(map(':'.join, (

@@ -5,6 +5,12 @@ from untwisted import db
 
 db.connect = lambda *args, **kwds: None
 
+@untwisted.call
+class random:
+  pass
+
+__import__('random').random = random
+
 run = reactor.run
 reactor.run = lambda: None
 
