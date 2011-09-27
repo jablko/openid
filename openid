@@ -61,15 +61,7 @@ class factory(http.HTTPFactory):
 
               # US-ASCII characters excluding CTLs, whitespace DQUOTE, comma,
               # semicolon, and backslash
-              alphabet = chr(0x21) + ''.join(map(chr, range(0x23, 0x2b + 1))) + ''.join(map(chr, range(0x2d, 0x3a + 1))) + ''.join(map(chr, range(0x3c, 0x5b + 1))) + ''.join(map(chr, range(0x5d, 0x7e + 1)))
-
-              # Choose six letters from alphabet, at random
-              letter = random()
-              cookie = ''
-              for _ in range(6):
-                letter *= len(alphabet)
-                cookie += alphabet[int(letter)]
-                letter -= int(letter)
+              cookie = untwisted.randstr(6, chr(0x21) + ''.join(map(chr, range(0x23, 0x2b + 1))) + ''.join(map(chr, range(0x2d, 0x3a + 1))) + ''.join(map(chr, range(0x3c, 0x5b + 1))) + ''.join(map(chr, range(0x5d, 0x7e + 1))))
 
               ctx.cookie.add(cookie)
 
@@ -110,15 +102,7 @@ class factory(http.HTTPFactory):
 
             # ASCII characters in the range 33-126 inclusive (printable
             # non-whitespace characters)
-            alphabet = ''.join(map(chr, range(33, 126 + 1)))
-
-            # Choose six letters from alphabet, at random
-            letter = random()
-            assocHandle = ''
-            for _ in range(6):
-              letter *= len(alphabet)
-              assocHandle += alphabet[int(letter)]
-              letter -= int(letter)
+            assocHandle = untwisted.randstr(6, ''.join(map(chr, range(33, 126 + 1))))
 
             ctx.assoc.add(assocHandle)
 
@@ -249,30 +233,14 @@ class factory(http.HTTPFactory):
                     sender, = cursor.execute('SELECT sender FROM address WHERE address = %s', realm).next()
 
                 except StopIteration:
-                  alphabet = '0123456789abcdefghijklmnopqrstuvwxyz'
-
-                  # Choose six letters from alphabet, at random
-                  letter = random()
-                  sender = ''
-                  for _ in range(6):
-                    letter *= len(alphabet)
-                    sender += alphabet[int(letter)]
-                    letter -= int(letter)
+                  sender = untwisted.randstr(6, '0123456789abcdefghijklmnopqrstuvwxyz')
 
                   for cursor in asdf:
                     cursor.execute('INSERT INTO address (address, sender) VALUES (%s, %s)', realm, sender)
 
                 # ASCII characters in the range 33-126 inclusive (printable
                 # non-whitespace characters)
-                alphabet = ''.join(map(chr, range(33, 126 + 1)))
-
-                # Choose six letters from alphabet, at random
-                letter = random()
-                assocHandle = ''
-                for _ in range(6):
-                  letter *= len(alphabet)
-                  assocHandle += alphabet[int(letter)]
-                  letter -= int(letter)
+                assocHandle = untwisted.randstr(6, ''.join(map(chr, range(33, 126 + 1))))
 
                 ctx.assoc.add(assocHandle)
 
