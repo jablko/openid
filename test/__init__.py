@@ -3,7 +3,11 @@ from testify import *
 from twisted.internet import reactor
 from untwisted import db
 
-db.connect = lambda *args, **kwds: None
+class connect:
+  def __init__(ctx, *args, **kwds):
+    pass
+
+db.connect = connect
 
 @untwisted.call
 class random:
@@ -16,7 +20,8 @@ reactor.run = lambda: None
 
 sys.path.insert(0, os.path.dirname(__file__) + '/..')
 
-execfile(os.path.dirname(__file__) + '/../openid')
+globals = {}
+execfile(os.path.dirname(__file__) + '/../openid', globals)
 
 def sdfg(cbl):
   cbl()
