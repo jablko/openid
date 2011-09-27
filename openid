@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import base64, hashlib, hmac, os, pickle, rfc6265, sys, time, untwisted
+import base64, hashlib, hmac, os, pickle, rfc6265, sys, time, untwisted, urllib
 from lxml import etree
 from random import random
 from twisted.internet import reactor
@@ -21,6 +21,8 @@ def timeout(secs, *args, **kwds):
   reactor.callLater(secs, untwisted.partial(ctx, *args or (None,), **kwds))
 
   return ctx
+
+urlencoded = lambda asdf: untwisted.manyMap(*(map(urllib.unquote_plus, asdf.split('=', 1)) for asdf in asdf.split('&')))
 
 log.startLogging(sys.stdout)
 
@@ -50,26 +52,25 @@ class factory(http.HTTPFactory):
                   ctx.cookie.discard(str(cookiePair.cookieValue))
 
             ctx.content.seek(0)
-            params = http.parse_qs(ctx.content.read())
+            params = urlencoded(ctx.content.read())
 
-            password, = params['password']
+            if str(params['password']):
+              for cursor in dbmail:
+                count, = cursor.execute('SELECT COUNT(*) FROM dbmail_users WHERE passwd = %s', params['password']).next()
 
-            for cursor in dbmail:
-              count, = cursor.execute('SELECT COUNT(*) FROM dbmail_users WHERE passwd = %s', password).next()
+              if count:
 
-            if count:
+                # US-ASCII characters excluding CTLs, whitespace DQUOTE, comma,
+                # semicolon, and backslash
+                cookie = untwisted.randstr(6, chr(0x21) + ''.join(map(chr, range(0x23, 0x2b + 1))) + ''.join(map(chr, range(0x2d, 0x3a + 1))) + ''.join(map(chr, range(0x3c, 0x5b + 1))) + ''.join(map(chr, range(0x5d, 0x7e + 1))))
 
-              # US-ASCII characters excluding CTLs, whitespace DQUOTE, comma,
-              # semicolon, and backslash
-              cookie = untwisted.randstr(6, chr(0x21) + ''.join(map(chr, range(0x23, 0x2b + 1))) + ''.join(map(chr, range(0x2d, 0x3a + 1))) + ''.join(map(chr, range(0x3c, 0x5b + 1))) + ''.join(map(chr, range(0x5d, 0x7e + 1))))
+                ctx.cookie.add(cookie)
 
-              ctx.cookie.add(cookie)
+                ctx.setHeader('Set-Cookie', 'openid=' + cookie)
 
-              ctx.setHeader('Set-Cookie', 'openid=' + cookie)
+                ctx.redirect('/cookie')
 
-              ctx.redirect('/cookie')
-
-              return ctx.finish()
+                return ctx.finish()
 
           ctx.setHeader('Content-Type', 'text/html')
 
@@ -89,16 +90,15 @@ class factory(http.HTTPFactory):
 
         if 'GET' == method:
           _, query = resource.split('?', 1)
-          params = http.parse_qs(query)
+          params = urlencoded(query)
 
         elif 'POST' == method:
           ctx.content.seek(0)
-          params = http.parse_qs(ctx.content.read())
+          params = urlencoded(ctx.content.read())
 
           # All direct requests are HTTP POST
-          mode, = params['openid.mode']
 
-          if 'associate' == mode:
+          if 'associate' == str(params['openid.mode']):
 
             # ASCII characters in the range 33-126 inclusive (printable
             # non-whitespace characters)
@@ -110,15 +110,13 @@ class factory(http.HTTPFactory):
             timeout(14 * 24 * 60 * 60).then(lambda _: ctx.assoc.remove(assocHandle))
 
             try:
-              dhGen, = params['openid.dh_gen']
-              g = btwocDec(base64.b64decode(dhGen.replace('-', '+').replace('_', '/')))
+              g = btwocDec(base64.b64decode(params['openid.dh_gen'].replace('-', '+').replace('_', '/')))
 
             except KeyError:
               g = 2
 
             try:
-              dhModulus, = params['openid.dh_modulus']
-              p = btwocDec(base64.b64decode(dhModulus.replace('-', '+').replace('_', '/')))
+              p = btwocDec(base64.b64decode(params['openid.dh_modulus'].replace('-', '+').replace('_', '/')))
 
             except KeyError:
 
@@ -131,45 +129,39 @@ class factory(http.HTTPFactory):
 
             dhServerPublic = base64.b64encode(btwocEnc(pow(g, xb, p)))
 
-            dhConsumerPublic, = params['openid.dh_consumer_public']
-
-            assocType, = params['openid.assoc_type']
-            sessionType, = params['openid.session_type']
-
             # The MAC key MUST be the same length as the output of H, the hash
             # function - 160 bits (20 bytes) for DH-SHA1 or 256 bits (32 bytes)
             # for DH-SHA256, as well as the output of the signature algorithm
             # of this association
 
-            if 'DH-SHA1' == sessionType:
+            if 'DH-SHA1' == str(params['openid.session_type']):
               H = hashlib.sha1()
 
-              if 'HMAC-SHA1' == assocType:
+              if 'HMAC-SHA1' == str(params['openid.assoc_type']):
                 key = os.urandom(20)
 
-            elif 'DH-SHA256' == sessionType:
+            elif 'DH-SHA256' == str(params['openid.session_type']):
               H = hashlib.sha256()
 
-              if 'HMAC-SHA256' == assocType:
+              if 'HMAC-SHA256' == str(params['openid.assoc_type']):
                 key = os.urandom(32)
 
-            H.update(btwocEnc(pow(btwocDec(base64.b64decode(dhConsumerPublic.replace('-', '+').replace('_', '/'))), xb, p)))
+            H.update(btwocEnc(pow(btwocDec(base64.b64decode(params['openid.dh_consumer_public'].replace('-', '+').replace('_', '/'))), xb, p)))
             encMacKey = base64.b64encode(''.join(chr(ord(digest) ^ ord(key)) for digest, key in zip(H.digest(), key)))
 
             ctx.write('\n'.join(map(':'.join, (
               ('assoc_handle', assocHandle),
-              ('assoc_type', assocType),
+              ('assoc_type', str(params['openid.assoc_type'])),
               ('dh_server_public', dhServerPublic),
               ('enc_mac_key', encMacKey),
               ('expires_in', str(14 * 24 * 60 * 60)),
               ('ns', 'http://specs.openid.net/auth/2.0'),
-              ('session_type', sessionType)))) + '\n')
+              ('session_type', str(params['openid.session_type']))))) + '\n')
 
             return ctx.finish()
 
-          if 'check_authentication' == mode:
-            assocHandle, = params['openid.assoc_handle']
-            if assocHandle in ctx.assoc:
+          if 'check_authentication' == str(params['openid.mode']):
+            if str(params['openid.assoc_handle']) in ctx.assoc:
               ctx.write('\n'.join(map(':'.join, (
                 ('is_valid', 'true'),
                 ('ns', 'http://specs.openid.net/auth/2.0')))) + '\n')
@@ -182,23 +174,20 @@ class factory(http.HTTPFactory):
 
             return ctx.finish()
 
-        mode, = params['openid.mode']
-
-        if 'checkid_setup' == mode:
-          returnTo, = params['openid.return_to']
+        if 'checkid_setup' == str(params['openid.mode']):
 
           # Default: return_to URL
           try:
-            realm, = params['openid.realm']
+            realm = str(params['openid.realm'])
 
           except KeyError:
-            realm = returnTo
+            realm = str(params['openid.return_to'])
 
           else:
 
             # When present, the "openid.return_to" URL MUST match the
             # "openid.realm", or the OP MUST return an indirect error response
-            if not returnTo.startswith(realm):
+            if not params['openid.return_to'].startswith(realm):
               ctx.setHeader('Content-Type', 'text/html')
 
               ctx.write(''.join((
@@ -207,7 +196,7 @@ class factory(http.HTTPFactory):
                     '<title></title>',
                   '</head><body onload="document.forms[0].submit()">')))
 
-              form = etree.Element('form', action=returnTo, method='post')
+              form = etree.Element('form', action=str(params['openid.return_to']), method='post')
 
               for key, value in (
                   ('mode', 'error'),
@@ -253,13 +242,12 @@ class factory(http.HTTPFactory):
                   ('identity', 'http://nottheoilrig.com/' + sender),
                   ('op_endpoint', opEndpoint),
                   ('response_nonce', time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())),
-                  ('return_to', returnTo)]
+                  ('return_to', str(params['openid.return_to']))]
 
                 alias = {}
-                for key, value in params.iteritems():
+                for key, value in params:
                   if key.startswith('openid.ns.'):
-                    value, = value
-                    alias[value] = key[len('openid.ns.'):]
+                    alias[str(value)] = key[len('openid.ns.'):]
 
                 ctx.setHeader('Content-Type', 'text/html')
 
@@ -274,7 +262,7 @@ class factory(http.HTTPFactory):
 
                 ctx.write(etree.tostring(div))
 
-                form = etree.Element('form', action=returnTo, method='post')
+                form = etree.Element('form', action=str(params['openid.return_to']), method='post')
 
                 for key, value in (
                     ('mode', 'cancel'),
@@ -285,7 +273,7 @@ class factory(http.HTTPFactory):
 
                 ctx.write(etree.tostring(form))
 
-                form = etree.Element('form', action=returnTo, method='post')
+                form = etree.Element('form', action=str(params['openid.return_to']), method='post')
 
                 try:
                   axAlias = alias['http://openid.net/srv/ax/1.0']
@@ -298,10 +286,9 @@ class factory(http.HTTPFactory):
                   form.append(etree.Element('input', name='openid.{}.mode'.format(axAlias), type='hidden', value='fetch_response'))
 
                   axType = {}
-                  for key, value in params.iteritems():
+                  for key, value in params:
                     if key.startswith('openid.{}.type.'.format(axAlias)):
-                      value, = value
-                      axType[key[len('openid.{}.type.'.format(axAlias)):]] = value
+                      axType[key[len('openid.{}.type.'.format(axAlias)):]] = str(value)
 
                   axValue = {
                     'http://schema.openid.net/contact/email': sender + '@nottheoilrig.com',
@@ -315,7 +302,7 @@ class factory(http.HTTPFactory):
 
                   for itm in 'if_available', 'required':
                     try:
-                      attribute, = params['openid.{}.'.format(axAlias) + itm]
+                      attribute = params['openid.{}.'.format(axAlias) + itm]
 
                     except KeyError:
                       continue
@@ -340,7 +327,7 @@ class factory(http.HTTPFactory):
 
                 for itm in 'optional', 'required':
                   try:
-                    field, = params['openid.sreg.' + itm]
+                    field = params['openid.sreg.' + itm]
 
                   except KeyError:
                     continue
@@ -359,12 +346,13 @@ class factory(http.HTTPFactory):
 
                 div = etree.Element('div')
                 try:
-                  div.text, = params['openid.sreg.policy_url']
-
-                  ctx.write(etree.tostring(div))
+                  div.text = str(params['openid.sreg.policy_url'])
 
                 except KeyError:
                   pass
+
+                else:
+                  ctx.write(etree.tostring(div))
 
                 key = os.urandom(32)
 
@@ -395,7 +383,7 @@ class factory(http.HTTPFactory):
                 '<title></title>',
               '</head><body onload="document.forms[0].submit()">')))
 
-          form = etree.Element('form', action=returnTo, method='post')
+          form = etree.Element('form', action=str(params['openid.return_to']), method='post')
 
           for key, value in (
               ('mode', 'cancel'),
