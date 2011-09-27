@@ -177,7 +177,7 @@ class factory(http.HTTPFactory):
               ('assoc_type', assocType),
               ('dh_server_public', dhServerPublic),
               ('enc_mac_key', encMacKey),
-              ('expires_in', 14 * 24 * 60 * 60),
+              ('expires_in', str(14 * 24 * 60 * 60)),
               ('ns', 'http://specs.openid.net/auth/2.0'),
               ('session_type', sessionType)))) + '\n')
 
