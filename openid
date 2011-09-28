@@ -146,7 +146,9 @@ class factory(http.HTTPFactory):
             ctx.shared[assocHandle] = key
 
             # 14 days, in seconds
-            timeout(14 * 24 * 60 * 60).then(lambda _: ctx.shared.__delitem__(assocHandle))
+            expiresIn = 14 * 24 * 60 * 60
+
+            timeout(expiresIn).then(lambda _: ctx.shared.__delitem__(assocHandle))
 
             H.update(btwocEnc(pow(btwocDec(base64.b64decode(params['openid.dh_consumer_public'].replace('-', '+').replace('_', '/'))), xb, p)))
             encMacKey = base64.b64encode(''.join(chr(ord(digest) ^ ord(key)) for digest, key in zip(H.digest(), key)))
@@ -156,7 +158,7 @@ class factory(http.HTTPFactory):
               ('assoc_type', str(params['openid.assoc_type'])),
               ('dh_server_public', dhServerPublic),
               ('enc_mac_key', encMacKey),
-              ('expires_in', str(14 * 24 * 60 * 60)),
+              ('expires_in', str(expiresIn)),
               ('ns', 'http://specs.openid.net/auth/2.0'),
               ('session_type', str(params['openid.session_type']))))) + '\n')
 
