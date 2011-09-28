@@ -33,8 +33,10 @@ dbmail = db.connect(db='dbmail', user='dbmail')
 class factory(http.HTTPFactory):
   class protocol(http.HTTPChannel):
     class requestFactory(http.Request):
-      assoc = set()
       cookie = set()
+
+      private = {}
+      shared = {}
 
       def requestReceived(ctx, method, resource, version):
         ctx.client = ctx.channel.transport.getPeer()
@@ -104,11 +106,6 @@ class factory(http.HTTPFactory):
             # non-whitespace characters)
             assocHandle = untwisted.randstr(6, ''.join(map(chr, range(33, 126 + 1))))
 
-            ctx.assoc.add(assocHandle)
-
-            # 14 days, in seconds
-            timeout(14 * 24 * 60 * 60).then(lambda _: ctx.assoc.remove(assocHandle))
-
             try:
               g = btwocDec(base64.b64decode(params['openid.dh_gen'].replace('-', '+').replace('_', '/')))
 
@@ -146,6 +143,11 @@ class factory(http.HTTPFactory):
               if 'HMAC-SHA256' == str(params['openid.assoc_type']):
                 key = os.urandom(32)
 
+            ctx.shared[assocHandle] = key
+
+            # 14 days, in seconds
+            timeout(14 * 24 * 60 * 60).then(lambda _: ctx.shared.__delitem__(assocHandle))
+
             H.update(btwocEnc(pow(btwocDec(base64.b64decode(params['openid.dh_consumer_public'].replace('-', '+').replace('_', '/'))), xb, p)))
             encMacKey = base64.b64encode(''.join(chr(ord(digest) ^ ord(key)) for digest, key in zip(H.digest(), key)))
 
@@ -161,12 +163,26 @@ class factory(http.HTTPFactory):
             return ctx.finish()
 
           if 'check_authentication' == str(params['openid.mode']):
-            if str(params['openid.assoc_handle']) in ctx.assoc:
-              ctx.write('\n'.join(map(':'.join, (
-                ('is_valid', 'true'),
-                ('ns', 'http://specs.openid.net/auth/2.0')))) + '\n')
+            try:
 
-              return ctx.finish()
+              # For verifying signatures an OP MUST only use private
+              # associations and MUST NOT use associations that have shared
+              # keys.  If the verification request contains a handle for a
+              # shared association, it means the Relying Party no longer knows
+              # the shared secret, or an entity other than the RP (e.g. an
+              # attacker) has established this association with the OP
+              key = ctx.private[str(params['openid.assoc_handle'])]
+
+            except KeyError:
+              pass
+
+            else:
+              if hmac.new(key, '\n'.join(signed + ':' + str(params['openid.' + signed]) for signed in params['openid.signed'].split(',')) + '\n', hashlib.sha256).digest() == base64.b64decode(params['openid.sig'].replace('-', '+').replace('_', '/')):
+                ctx.write('\n'.join(map(':'.join, (
+                  ('is_valid', 'true'),
+                  ('ns', 'http://specs.openid.net/auth/2.0')))) + '\n')
+
+                return ctx.finish()
 
             ctx.write('\n'.join(map(':'.join, (
               ('is_valid', 'false'),
@@ -230,11 +246,6 @@ class factory(http.HTTPFactory):
                 # ASCII characters in the range 33-126 inclusive (printable
                 # non-whitespace characters)
                 assocHandle = untwisted.randstr(6, ''.join(map(chr, range(33, 126 + 1))))
-
-                ctx.assoc.add(assocHandle)
-
-                # 14 days, in seconds
-                timeout(14 * 24 * 60 * 60).then(lambda _: ctx.assoc.remove(assocHandle))
 
                 signed = [
                   ('assoc_handle', assocHandle),
@@ -355,6 +366,11 @@ class factory(http.HTTPFactory):
                   ctx.write(etree.tostring(div))
 
                 key = os.urandom(32)
+
+                ctx.private[assocHandle] = key
+
+                # 14 days, in seconds
+                timeout(14 * 24 * 60 * 60).then(lambda _: ctx.private.__delitem__(assocHandle))
 
                 signed.extend((
                   ('mode', 'id_res'),

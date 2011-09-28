@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+from openid.test import *
+from twisted.internet import protocol
+from twisted.web import http
+
+expect(1)
+
+@sdfg
+def _():
+
+  @untwisted.call
+  class factory(protocol.ClientFactory):
+    class protocol(http.HTTPClient):
+      def connectionMade(ctx):
+        content = '&'.join(map(untwisted.compose('openid.'.__add__, '='.join), (
+          ('assoc_handle', 'abc123'),
+          ('mode', 'check_authentication'),
+          ('sig', 'Ym9ndXM='),
+          ('signed', 'assoc_handle'))))
+
+        ctx.sendCommand('POST', '/')
+
+        ctx.sendHeader('Content-Length', len(content))
+
+        ctx.endHeaders()
+
+        ctx.transport.write(content)
+
+        globals['factory'].protocol.requestFactory.private['abc123'] = 'H\x94\x8bS\xe1\xc5I\xbb\xe27\xf9\xfdX\xbe\x17\x1a\xf9\xa1\xbdDc{P]\xb9u9\xb8\x97R\x19\xd0'
+
+      handleResponse = staticmethod(untwisted.partial(equal, '\n'.join(map(':'.join, (
+        ('is_valid', 'false'),
+        ('ns', 'http://specs.openid.net/auth/2.0')))) + '\n'))
+
+  reactor.connectTCP('localhost', 5629, factory)
