@@ -173,7 +173,11 @@ class factory(http.HTTPFactory):
               # shared association, it means the Relying Party no longer knows
               # the shared secret, or an entity other than the RP (e.g. an
               # attacker) has established this association with the OP
-              key = ctx.private[str(params['openid.assoc_handle'])]
+
+              # To prevent replay attacks, the OP MUST NOT issue more than one
+              # verification response for each authentication response it had
+              # previously issued
+              key = ctx.private.pop(str(params['openid.assoc_handle']))
 
             except KeyError:
               pass
